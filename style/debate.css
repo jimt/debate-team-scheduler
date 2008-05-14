@@ -1,0 +1,7 @@
+body {
+	font-family: Verdana, Hevetica, sans-serif;
+}
+
+tr.oddrow {
+	background-color: #EEEEEE;
+}

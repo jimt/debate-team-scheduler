@@ -1,0 +1,22 @@
+<html>
+  <head>
+    <title>Debate Schedule</title>
+  </head>
+  <body>
+    <h1>Debate Schedule Tool</h1>
+    <form action="debate" method="post">
+      {% if error %}
+      <table cellpadding="4" bgcolor="#ffcccc" border="2">
+        <tr><td>{{ error }}</td></tr>
+      </table>
+      {% endif %}
+      <table cellpadding="4">
+      <tr><td align="right">Union name:</td><td><input name="uname" type="text" size="25"></td></tr>
+      <tr><td align="right">Tournament name:</td><td><input name="tname" type="text" size="25"></td></tr>
+      <tr><td align="right">Number of teams:</td><td><input name="nteams" type="text" size="5"></td></tr>
+      <tr><td align="right">Number of rounds:</td><td><input name="nrounds" type="text" size="5"></td></tr>
+      <tr><td></td><td align="right"><input type="submit" value="Next >"></td></tr>
+    </table>
+    </form>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+<html>
+  <head>
+    <title>{{tname}} Schedule - Team Names</title>
+  </head>
+  <body>
+    <h1>Team Names</h1>
+    <div>Number of teams: {{ nteams }}</div>
+    <div>Number of rounds: {{ nrounds }}</div>
+    <form action="/debate/schedule" method="post">
+      {% for i in nteamrange %}
+      <div><input name="team" type="text" size="25" value="{{ i|add:1 }}"></div>
+      {% endfor %}
+      <div><input type="submit" value="Build schedule >"></div>
+    </form>
+  </body>
+</html>
+

@@ -1,0 +1,14 @@
+# compiled python
+*.py[co]
+build
+build-stamp
+exe.egg-info
+# editor debris
+*~
+.#*
+._*
+.*.sw?
+# OS debris
+.DS_Store
+index.yaml
+
