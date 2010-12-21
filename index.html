@@ -1,6 +1,7 @@
 <html>
   <head>
     <title>Debate Schedule</title>
+    <link type="text/css" rel="stylesheet" href="/style/debate.css" />
   </head>
   <body>
     <h1>Debate Schedule Tool</h1>
@@ -11,11 +12,15 @@
       </table>
       {% endif %}
       <table cellpadding="4">
-      <tr><td align="right">Union name:</td><td><input name="uname" type="text" size="25"></td></tr>
-      <tr><td align="right">Tournament name:</td><td><input name="tname" type="text" size="25"></td></tr>
-      <tr><td align="right">Number of teams:</td><td><input name="nteams" type="text" size="5"></td></tr>
-      <tr><td align="right">Number of rounds:</td><td><input name="nrounds" type="text" size="5"></td></tr>
-      <tr><td></td><td align="right"><input type="submit" value="Next >"></td></tr>
+        <tr><td align="right">Union name:</td><td><input name="uname" type="text" size="25" value="{{ uname }}"></td></tr>
+        <tr><td align="right">Tournament name:</td><td><input name="tname" type="text" size="25" value="{{ tname }}"></td></tr>
+        <tr><td align="right">Number of rounds:</td><td><input name="nrounds" type="text" size="5" value="{{ nrounds }}"></td></tr>
+      <tr><td align="right" valign="top">Team names:<br>
+          <span style="font-size: smaller;">(one per line)</span>
+      </td>
+      <td><textarea name="teams" rows="7" cols="25">{% for i in teams %}{{ i }}
+{% endfor %}</textarea></td></tr>
+      <tr><td></td><td align="right"><input type="submit" value="Build Schedule"></td></tr>
     </table>
     </form>
   </body>

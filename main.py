@@ -2,7 +2,7 @@
 #
 # Debate tournament schedule tool for Google AppEngine
 #
-# Copyright (c) 2005 James W. Tittsler
+# Copyright (c) 2008, 2010 James W. Tittsler
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -44,98 +44,53 @@ from appengine_utilities.sessions import Session
 
 class MainPage(webapp.RequestHandler):
   def get(self):
-    self.redirect("http://core-ed.net/")
+    self.redirect("http://www.core-ed.org/")
 
 class Debate(webapp.RequestHandler):
     def get(self):
         self.session = Session()
         path = os.path.join(os.path.dirname(__file__), 'index.html')
-        #self.response.out.write('<html><body>%s</body></html>' % path)
-        self.response.out.write(template.render(path, {}))
+        self.response.out.write(template.render(path, self.session))
     def post(self):
         self.session = Session()
         nteams = 0
         nrounds = 0
-        error = ''
+        self.session['error'] = ''
 
-        snteams = self.request.get('nteams')
-        if snteams <> '':
-            nteams = int(snteams)
-            if nteams <= 0:
-                error += 'Number of teams must be positive integer.<br />'
+        self.session['uname'] = self.request.get('uname')
+        self.session['tname'] = self.request.get('tname')
 
         snrounds = self.request.get('nrounds')
         if snrounds <> '':
             nrounds = int(snrounds)
+            self.session['nrounds'] = nrounds
             if nrounds <= 0:
                 error += 'Number of rounds must be positive integer.<br />'
 
-        if nteams > 0 and nrounds > 0 and nrounds < ((nteams+1)/2):
-            #tournament = Tournament()
-            #tournament.user = 1
-            #tournament.nteams = nteams
-            #tournament.nrounds = nrounds
-            #tournament.tname = self.request.get('tname')
-            #tournament.uname = self.request.get('uname')
-            #tournament.put()
-            self.session['nteams'] = nteams
-            self.session['nrounds'] = nrounds
-            self.session['tname'] = self.request.get('tname')
-            self.session['uname'] = self.request.get('uname')
-            #self.session['key'] = str(tournament.key())
-            self.redirect('debate/teams')
+        steams = self.request.get('teams')
+        teams = steams.split('\n')
+        teams[:] = [x.strip() for x in teams if x.strip()]
+        self.session['teams'] = teams
+        nteams = len(teams)
+        self.session['nteams'] = nteams
+
+        if nteams > 0 and nrounds > 0 and nrounds <= ((nteams+1)/2):
+            self.redirect('debate/schedule')
         else:
-            error += 'Number of teams must be at least twice the number of rounds<br />'
+            self.session['error'] += 'Number of teams (%d) must be at least twice the number of rounds (%d)<br />' % (nteams, nrounds)
 
         path = os.path.join(os.path.dirname(__file__), 'index.html')
-        tokens = {
-                'nteams': nteams,
-                'nrounds': nrounds,
-                'error': error,
-                }
-        #self.response.out.write('<html><body>%s</body></html>' % path)
-        self.response.out.write(template.render(path, tokens))
-
-class DebateTeams(webapp.RequestHandler):
-    def get(self):
-        self.session = Session()
-
-        #tournaments = db.GqlQuery("SELECT * FROM Tournament WHERE user = :1",
-        #        1)
-        #for tournament in tournaments:
-        #    tokens = {
-        #            'uname': tournament.uname,
-        #            'tname': tournament.tname,
-        #            'nteams': tournament.nteams,
-        #            'nrounds': tournament.nrounds,
-        #            'nteamrange': range(tournament.nteams),
-        #            }
-        tokens = {
-                'uname': self.session['uname'],
-                'tname': self.session['tname'],
-                'nteams': self.session['nteams'],
-                'nrounds': self.session['nrounds'],
-                'nteamrange': range(self.session['nteams']),
-                }
-        path = os.path.join(os.path.dirname(__file__), 'teams.html')
-        self.response.out.write(template.render(path, tokens))
+        self.response.out.write(template.render(path, self.session))
 
 class DebateSchedule(webapp.RequestHandler):
-    def post(self):
+    def get(self):
         self.session = Session()
         path = os.path.join(os.path.dirname(__file__), 'schedule.html')
-        #tournaments = db.GqlQuery("SELECT * FROM Tournament WHERE user = :1",
-        #        1)
-        #for tournament in tournaments:
-        #    uname = tournament.uname
-        #    tname = tournament.tname
-        #    nteams = tournament.nteams
-        #    nrounds = tournament.nrounds
         uname = self.session['uname']
         tname = self.session['tname']
         nteams = self.session['nteams']
         nrounds = self.session['nrounds']
-        teams = self.request.get_all('team')
+        teams = self.session['teams']
         if len(teams) % 2 == 1:
             teams.append('- bye -')
             nteams += 1
@@ -147,20 +102,6 @@ class DebateSchedule(webapp.RequestHandler):
         csvf = StringIO()
         writer = csv.writer(csvf)
         
-        # RTF
-        #doc = Document()
-        #ss = doc.StyleSheet
-        #section = Section()
-        #doc.Sections.append(section)
-        #p = Paragraph(ss.ParagraphStyles.Heading1)
-        #p.append('%s: %s' % (uname, tname))
-        #section.append(p)
-        #table = Table([TabPS.DEFAULT_WIDTH*3] * nrounds)
-        #c = []
-        #for i in range(nrounds):
-        #    c.append(Cell(Paragraph('Round %d' % i)))
-        #table.AddRow(c)
-
         n2 = nteams/2
         a = teams[:n2]
         n = teams[n2:]
@@ -206,8 +147,6 @@ class DebateSchedule(webapp.RequestHandler):
             pname += ": "
         pname += tname
         csvs = csvf.getvalue()
-        #tournament.csv = csvs
-        #tournament.put()
         self.session['csv'] = csvs
         csvs = csvs.replace('\n', '<br />')
         tokens = {
@@ -228,14 +167,6 @@ class DebateSchedule(webapp.RequestHandler):
 
 class DebateCSV(webapp.RequestHandler):
     def get(self):
-        #tournaments = db.GqlQuery("SELECT * FROM Tournament WHERE user = :1",
-        #        1)
-        #for tournament in tournaments:
-        #    uname = tournament.uname
-        #    tname = tournament.tname
-        #    nteams = tournament.nteams
-        #    nrounds = tournament.nrounds
-        #    csv = tournament.csv
         self.session = Session()
         csv = self.session['csv']
         basename = '%s_%s' % (self.session['uname'], self.session['tname'])
@@ -249,7 +180,6 @@ class DebateCSV(webapp.RequestHandler):
 application = webapp.WSGIApplication(
                                      [('/', MainPage),
                                       ('/debate/csv', DebateCSV),
-                                      ('/debate/teams', DebateTeams),
                                       ('/debate/schedule', DebateSchedule),
                                       ('/debate', Debate)],
                                      debug=True)
