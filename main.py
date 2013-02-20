@@ -74,7 +74,8 @@ class Debate(webapp.RequestHandler):
         nteams = len(teams)
         self.session['nteams'] = nteams
 
-        if nteams > 0 and nrounds > 0 and nrounds <= ((nteams+1)/2):
+        #if nteams > 0 and nrounds > 0 and nrounds <= ((nteams+1)/2):
+        if nteams > 0 and nrounds > 0:
             self.redirect('debate/schedule')
         else:
             self.session['error'] += 'Number of teams (%d) must be at least twice the number of rounds (%d)<br />' % (nteams, nrounds)
