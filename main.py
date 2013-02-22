@@ -59,6 +59,7 @@ class Debate(webapp.RequestHandler):
 
         self.session['uname'] = self.request.get('uname')
         self.session['tname'] = self.request.get('tname')
+        mode = self.request.get('schedule')
 
         snrounds = self.request.get('nrounds')
         if snrounds <> '':
@@ -75,8 +76,10 @@ class Debate(webapp.RequestHandler):
         self.session['nteams'] = nteams
 
         #if nteams > 0 and nrounds > 0 and nrounds <= ((nteams+1)/2):
-        if nteams > 0 and nrounds > 0:
+        if nteams > 0 and nrounds > 0 and mode == "Build Schedule":
             self.redirect('debate/schedule')
+        elif nteams > 0 and nrounds > 0 and mode == "Build Schedule 2":
+            self.redirect('debate/schedule2')
         else:
             self.session['error'] += 'Number of teams (%d) must be at least twice the number of rounds (%d)<br />' % (nteams, nrounds)
 
@@ -166,6 +169,93 @@ class DebateSchedule(webapp.RequestHandler):
 
         self.response.out.write(template.render(path, tokens))
 
+class DebateSchedule2(webapp.RequestHandler):
+    def get(self):
+        self.session = Session()
+        path = os.path.join(os.path.dirname(__file__), 'schedule.html')
+        uname = self.session['uname']
+        tname = self.session['tname']
+        nteams = self.session['nteams']
+        nrounds = self.session['nrounds']
+        teams = self.session['teams']
+        if len(teams) % 2 == 1:
+            teams.append('- bye -')
+            nteams += 1
+
+        random.seed()
+        random.shuffle(teams)
+
+        # CSV
+        csvf = StringIO()
+        writer = csv.writer(csvf)
+        
+        n2 = nteams/2
+
+        tc = []
+        for round in range(nrounds):
+            col = []
+            for i in range(n2):
+                if round % 2 == 0:
+                    col.append((teams[i], teams[nteams-(i+1)]))
+                else:
+                    col.append((teams[nteams-(i+1)], teams[i]))
+
+            # change venues each round
+            for i in range(round):
+                col = col[1:] + col[0:1]
+
+            tc.append(col) 
+
+            # rotate opponents for next round
+            teams = teams[0:1] + teams[-1:] + teams[1:-1]
+
+        row = []
+        table = '<table cellpadding=4><tr>'
+        for round in range(nrounds):
+            table += '<th>Round %d</th>' % (round+1)
+            row.append('Round %d' % (round+1))
+        table += '</tr>'
+
+        writer.writerow(row)
+
+        for t in range(n2):
+            rowa = []
+            rown = []
+            if t % 2 == 0:
+                table += '<tr class="evenrow">'
+            else:
+                table += '<tr class="oddrow">'
+            for round in range(nrounds):
+                table += '<td>A: %s<br />N: %s</td>' % (tc[round][t][0],
+                        tc[round][t][1])
+                rowa.append('A: %s' % tc[round][t][0])
+                rown.append('N: %s' % tc[round][t][1])
+            table += '</tr>'
+            writer.writerow(rowa)
+            writer.writerow(rown)
+        table += '</table>'
+        pname = uname
+        if uname and tname:
+            pname += ": "
+        pname += tname
+        csvs = csvf.getvalue()
+        self.session['csv'] = csvs
+        csvs = csvs.replace('\n', '<br />')
+        tokens = {
+                'uname': uname,
+                'tname': tname,
+                'pname': pname,
+                'nteams': nteams,
+                'nrounds': nrounds,
+                'n2': n2,
+                'teams': teams,
+                #'a': a,
+                #'n': n,
+                'thetable': table,
+                'csv': csvs,
+                }
+
+        self.response.out.write(template.render(path, tokens))
 class DebateCSV(webapp.RequestHandler):
     def get(self):
         self.session = Session()
@@ -182,6 +272,7 @@ application = webapp.WSGIApplication(
                                      [('/', MainPage),
                                       ('/debate/csv', DebateCSV),
                                       ('/debate/schedule', DebateSchedule),
+                                      ('/debate/schedule2', DebateSchedule2),
                                       ('/debate', Debate)],
                                      debug=True)
 

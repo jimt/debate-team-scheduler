@@ -20,7 +20,8 @@
       </td>
       <td><textarea name="teams" rows="7" cols="25">{% for i in teams %}{{ i }}
 {% endfor %}</textarea></td></tr>
-      <tr><td></td><td align="right"><input type="submit" value="Build Schedule"></td></tr>
+      <tr><td></td><td align="right"><input type="submit" name="schedule" value="Build Schedule"><br><span style="font-size: smaller;">Intended for cases where the number of rounds &gt;= number of teams/2</span></td></tr>
+      <tr><td></td><td align="right"><input type="submit" name="schedule" value="Build Schedule 2"><br><span style="font-size: smaller;">Round robin, relaxing constraint on alternating position</span></td></tr>
     </table>
     </form>
   </body>
