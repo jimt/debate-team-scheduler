@@ -1,4 +1,4 @@
-application: core-ed
+application: core-ed-debate
 version: 5
 runtime: python
 api_version: 1
