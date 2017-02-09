@@ -2,7 +2,7 @@
 #
 # Debate tournament schedule tool for Google AppEngine
 #
-# Copyright (c) 2008, 2010 James W. Tittsler
+# Copyright (c) 2008, 2010, 2017 James W. Tittsler
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,12 +27,15 @@ import random
 import csv
 import codecs
 from StringIO import StringIO
-from google.appengine.ext import webapp
-from google.appengine.ext.webapp import template
-from google.appengine.ext.webapp.util import run_wsgi_app
-from google.appengine.ext import db
-from appengine_utilities.sessions import Session
-#from PyRTF import *
+
+import jinja2
+import webapp2
+from webapp2_extras import sessions
+
+JINJA_ENVIRONMENT =jinja2.Environment(
+    loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
+    extensions=['jinja2.ext.autoescape'],
+    autoescape=True)
 
 class UnicodeWriter:
     """
@@ -63,26 +66,34 @@ class UnicodeWriter:
         for row in rows:
             self.writerow(row)
 
-#class Tournament(db.Model):
-#    user = db.IntegerProperty()
-#    uname = db.StringProperty()
-#    tname = db.StringProperty()
-#    nteams = db.IntegerProperty()
-#    nrounds = db.IntegerProperty()
-#    teams = db.StringListProperty()
-#    csv = db.TextProperty()
+class BaseHandler(webapp2.RequestHandler):
+    def dispatch(self):
+        # Get a session store for this request
+        self.session_store = sessions.get_store(request=self.request)
 
-class MainPage(webapp.RequestHandler):
-  def get(self):
-    self.redirect("http://www.core-ed.org/")
+        try:
+            webapp2.RequestHandler.dispatch(self)
+        finally:
+            self.session_store.save_sessions(self.response)
 
-class Debate(webapp.RequestHandler):
+    @webapp2.cached_property
+    def session(self):
+        # Returns a session using the default cookie key
+        return self.session_store.get_session()
+
+class MainPage(BaseHandler):
+    """
+    By default, we redirect to the CORE home page
+    """
     def get(self):
-        self.session = Session()
-        path = os.path.join(os.path.dirname(__file__), 'index.html')
-        self.response.out.write(template.render(path, self.session))
+        self.redirect("http://www.core-ed.org/")
+
+class Debate(BaseHandler):
+    def get(self):
+        template = JINJA_ENVIRONMENT.get_template('index.html')
+        self.response.out.write(template.render(self.session))
+
     def post(self):
-        self.session = Session()
         nteams = 0
         nrounds = 0
         self.session['error'] = ''
@@ -113,13 +124,11 @@ class Debate(webapp.RequestHandler):
         else:
             self.session['error'] += 'Number of teams (%d) must be at least twice the number of rounds (%d)<br />' % (nteams, nrounds)
 
-        path = os.path.join(os.path.dirname(__file__), 'index.html')
-        self.response.out.write(template.render(path, self.session))
+        template = JINJA_ENVIRONMENT.get_template('index.html')
+        self.response.out.write(template.render(self.session))
 
-class DebateSchedule(webapp.RequestHandler):
+class DebateSchedule(BaseHandler):
     def get(self):
-        self.session = Session()
-        path = os.path.join(os.path.dirname(__file__), 'schedule.html')
         uname = self.session['uname']
         tname = self.session['tname']
         nteams = self.session['nteams']
@@ -151,31 +160,24 @@ class DebateSchedule(webapp.RequestHandler):
                     col.append((n[ni], a[ai]))
             tc.append(col)
 
-        row = []
-        table = '<table cellpadding=4><tr>'
+        header = []
         for round in range(nrounds):
-            table += '<th>Round %d</th>' % (round+1)
-            row.append('Round %d' % (round+1))
-        table += '</tr>'
+            header.append('Round %d' % (round+1))
 
-        writer.writerow(row)
+        writer.writerow(header)
 
+        rows = []
         for t in range(n2):
             rowa = []
             rown = []
-            if t % 2 == 0:
-                table += '<tr class="evenrow">'
-            else:
-                table += '<tr class="oddrow">'
+            row = []
             for round in range(nrounds):
-                table += '<td>A: %s<br />N: %s</td>' % (tc[round][t][0],
-                        tc[round][t][1])
                 rowa.append('A: %s' % tc[round][t][0])
                 rown.append('N: %s' % tc[round][t][1])
-            table += '</tr>'
+                row.append((tc[round][t][0], tc[round][t][1]))
             writer.writerow(rowa)
             writer.writerow(rown)
-        table += '</table>'
+            rows.append(row)
         pname = uname
         if uname and tname:
             pname += ": "
@@ -193,16 +195,16 @@ class DebateSchedule(webapp.RequestHandler):
                 'teams': teams,
                 'a': a,
                 'n': n,
-                'thetable': table,
+                'header': header,
+                'rows': rows,
                 'csv': csvs,
                 }
 
-        self.response.out.write(template.render(path, tokens))
+        template = JINJA_ENVIRONMENT.get_template('schedule.html')
+        self.response.out.write(template.render(tokens))
 
-class DebateSchedule2(webapp.RequestHandler):
+class DebateSchedule2(BaseHandler):
     def get(self):
-        self.session = Session()
-        path = os.path.join(os.path.dirname(__file__), 'schedule.html')
         uname = self.session['uname']
         tname = self.session['tname']
         nteams = self.session['nteams']
@@ -239,31 +241,24 @@ class DebateSchedule2(webapp.RequestHandler):
             # rotate opponents for next round
             teams = teams[0:1] + teams[-1:] + teams[1:-1]
 
-        row = []
-        table = '<table cellpadding=4><tr>'
+        header = []
         for round in range(nrounds):
-            table += '<th>Round %d</th>' % (round+1)
-            row.append('Round %d' % (round+1))
-        table += '</tr>'
+            header.append('Round %d' % (round+1))
 
-        writer.writerow(row)
+        writer.writerow(header)
 
+        rows = []
         for t in range(n2):
             rowa = []
             rown = []
-            if t % 2 == 0:
-                table += '<tr class="evenrow">'
-            else:
-                table += '<tr class="oddrow">'
+            row = []
             for round in range(nrounds):
-                table += '<td>A: %s<br />N: %s</td>' % (tc[round][t][0],
-                        tc[round][t][1])
                 rowa.append('A: %s' % tc[round][t][0])
                 rown.append('N: %s' % tc[round][t][1])
-            table += '</tr>'
+                row.append((tc[round][t][0], tc[round][t][1]))
             writer.writerow(rowa)
             writer.writerow(rown)
-        table += '</table>'
+            rows.append(row)
         pname = uname
         if uname and tname:
             pname += ": "
@@ -281,14 +276,16 @@ class DebateSchedule2(webapp.RequestHandler):
                 'teams': teams,
                 #'a': a,
                 #'n': n,
-                'thetable': table,
+                'header': header,
+                'rows': rows,
                 'csv': csvs,
                 }
 
-        self.response.out.write(template.render(path, tokens))
-class DebateCSV(webapp.RequestHandler):
+        template = JINJA_ENVIRONMENT.get_template('schedule.html')
+        self.response.out.write(template.render(tokens))
+
+class DebateCSV(BaseHandler):
     def get(self):
-        self.session = Session()
         csv = self.session['csv']
         basename = '%s_%s' % (self.session['uname'], self.session['tname'])
         if basename == '_':
@@ -298,17 +295,17 @@ class DebateCSV(webapp.RequestHandler):
         self.response.headers['Content-Disposition'] = 'inline; filename=%s.csv' % basename
         self.response.out.write(csv)
 
-application = webapp.WSGIApplication(
-                                     [('/', MainPage),
-                                      ('/debate/csv', DebateCSV),
-                                      ('/debate/schedule', DebateSchedule),
-                                      ('/debate/schedule2', DebateSchedule2),
-                                      ('/debate', Debate)],
-                                     debug=True)
+config = {}
+config['webapp2_extras.sessions'] = {
+        'secret_key': os.environ['COOKIE_SECRET']
+        }
 
-def main():
-    run_wsgi_app(application)
-
-if __name__ == "__main__":
-    main()
+app = webapp2.WSGIApplication(
+          [('/', MainPage),
+          ('/debate/csv', DebateCSV),
+          ('/debate/schedule', DebateSchedule),
+          ('/debate/schedule2', DebateSchedule2),
+          ('/debate', Debate)],
+          debug=True,
+          config=config)
 

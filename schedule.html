@@ -5,7 +5,20 @@
   </head>
   <body>
     <h1>{{ pname }}</h1>
-    {{ thetable }}
+    <table cellpadding=4>
+      <tr>
+        {% for item in header %}
+          <th>{{ item }}</th>
+        {% endfor %}
+      </tr>
+      {% for row in rows %}
+      <tr class="{{ loop.cycle('evenrow', 'oddrow') }}">
+        {% for item in row %}
+          <td>A: {{ item[0] }}<br>N: {{ item[1] }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </table>
     <!--<p class="noprint"><a href="csv">Download CSV version</a></p>-->
   </body>
 </html>
