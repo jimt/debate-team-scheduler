@@ -3,17 +3,17 @@
 # Debate tournament schedule tool for Google AppEngine
 #
 # Copyright (c) 2008, 2010 James W. Tittsler
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,6 +25,7 @@
 import os
 import random
 import csv
+import codecs
 from StringIO import StringIO
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
@@ -32,6 +33,35 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.ext import db
 from appengine_utilities.sessions import Session
 #from PyRTF import *
+
+class UnicodeWriter:
+    """
+    A CSV writer which will write rows to CSV file "f",
+    which is encoded in the given encoding.
+    """
+
+    def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
+        # Redirect output to a queue
+        self.queue = StringIO()
+        self.writer = csv.writer(self.queue, dialect=dialect, **kwds)
+        self.stream = f
+        self.encoder = codecs.getincrementalencoder(encoding)()
+
+    def writerow(self, row):
+        self.writer.writerow([s.encode("utf-8") for s in row])
+        # Fetch UTF-8 output from the queue ...
+        data = self.queue.getvalue()
+        data = data.decode("utf-8")
+        # ... and reencode it into the target encoding
+        data = self.encoder.encode(data)
+        # write to the target stream
+        self.stream.write(data)
+        # empty queue
+        self.queue.truncate(0)
+
+    def writerows(self, rows):
+        for row in rows:
+            self.writerow(row)
 
 #class Tournament(db.Model):
 #    user = db.IntegerProperty()
@@ -104,8 +134,8 @@ class DebateSchedule(webapp.RequestHandler):
 
         # CSV
         csvf = StringIO()
-        writer = csv.writer(csvf)
-        
+        writer = UnicodeWriter(csvf)
+
         n2 = nteams/2
         a = teams[:n2]
         n = teams[n2:]
@@ -119,7 +149,7 @@ class DebateSchedule(webapp.RequestHandler):
                     col.append((a[ai], n[ni]))
                 else:
                     col.append((n[ni], a[ai]))
-            tc.append(col) 
+            tc.append(col)
 
         row = []
         table = '<table cellpadding=4><tr>'
@@ -188,7 +218,7 @@ class DebateSchedule2(webapp.RequestHandler):
         # CSV
         csvf = StringIO()
         writer = csv.writer(csvf)
-        
+
         n2 = nteams/2
 
         tc = []
@@ -204,7 +234,7 @@ class DebateSchedule2(webapp.RequestHandler):
             for i in range(round):
                 col = col[1:] + col[0:1]
 
-            tc.append(col) 
+            tc.append(col)
 
             # rotate opponents for next round
             teams = teams[0:1] + teams[-1:] + teams[1:-1]
