@@ -32,7 +32,7 @@ import jinja2
 import webapp2
 from webapp2_extras import sessions
 
-JINJA_ENVIRONMENT =jinja2.Environment(
+JINJA_ENVIRONMENT = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
     extensions=['jinja2.ext.autoescape'],
     autoescape=True)
@@ -107,7 +107,7 @@ class Debate(BaseHandler):
             nrounds = int(snrounds)
             self.session['nrounds'] = nrounds
             if nrounds <= 0:
-                error += 'Number of rounds must be positive integer.<br />'
+                self.session['error'] = 'There must be at least one round.<br>'
 
         steams = self.request.get('teams')
         teams = steams.split('\n')
@@ -118,11 +118,13 @@ class Debate(BaseHandler):
 
         #if nteams > 0 and nrounds > 0 and nrounds <= ((nteams+1)/2):
         if nteams > 0 and nrounds > 0 and mode == "Build Schedule":
+            self.session['error'] = ''
             self.redirect('debate/schedule')
         elif nteams > 0 and nrounds > 0 and mode == "Build Schedule 2":
+            self.session['error'] = ''
             self.redirect('debate/schedule2')
         else:
-            self.session['error'] += 'Number of teams (%d) must be at least twice the number of rounds (%d)<br />' % (nteams, nrounds)
+            self.session['error'] += 'Number of teams (%d) must be at least twice the number of rounds (%d).' % (nteams, nrounds)
 
         template = JINJA_ENVIRONMENT.get_template('index.html')
         self.response.out.write(template.render(self.session))
@@ -186,19 +188,19 @@ class DebateSchedule(BaseHandler):
         self.session['csv'] = csvs
         csvs = csvs.replace('\n', '<br />')
         tokens = {
-                'uname': uname,
-                'tname': tname,
-                'pname': pname,
-                'nteams': nteams,
-                'nrounds': nrounds,
-                'n2': n2,
-                'teams': teams,
-                'a': a,
-                'n': n,
-                'header': header,
-                'rows': rows,
-                'csv': csvs,
-                }
+            'uname': uname,
+            'tname': tname,
+            'pname': pname,
+            'nteams': nteams,
+            'nrounds': nrounds,
+            'n2': n2,
+            'teams': teams,
+            'a': a,
+            'n': n,
+            'header': header,
+            'rows': rows,
+            'csv': csvs,
+            }
 
         template = JINJA_ENVIRONMENT.get_template('schedule.html')
         self.response.out.write(template.render(tokens))
@@ -267,19 +269,19 @@ class DebateSchedule2(BaseHandler):
         self.session['csv'] = csvs
         csvs = csvs.replace('\n', '<br />')
         tokens = {
-                'uname': uname,
-                'tname': tname,
-                'pname': pname,
-                'nteams': nteams,
-                'nrounds': nrounds,
-                'n2': n2,
-                'teams': teams,
-                #'a': a,
-                #'n': n,
-                'header': header,
-                'rows': rows,
-                'csv': csvs,
-                }
+            'uname': uname,
+            'tname': tname,
+            'pname': pname,
+            'nteams': nteams,
+            'nrounds': nrounds,
+            'n2': n2,
+            'teams': teams,
+            #'a': a,
+            #'n': n,
+            'header': header,
+            'rows': rows,
+            'csv': csvs,
+            }
 
         template = JINJA_ENVIRONMENT.get_template('schedule.html')
         self.response.out.write(template.render(tokens))
@@ -297,15 +299,14 @@ class DebateCSV(BaseHandler):
 
 config = {}
 config['webapp2_extras.sessions'] = {
-        'secret_key': os.environ['COOKIE_SECRET']
-        }
+    'secret_key': os.environ['COOKIE_SECRET']
+    }
 
 app = webapp2.WSGIApplication(
-          [('/', MainPage),
-          ('/debate/csv', DebateCSV),
-          ('/debate/schedule', DebateSchedule),
-          ('/debate/schedule2', DebateSchedule2),
-          ('/debate', Debate)],
-          debug=True,
-          config=config)
-
+             [('/', MainPage),
+             ('/debate/csv', DebateCSV),
+             ('/debate/schedule', DebateSchedule),
+             ('/debate/schedule2', DebateSchedule2),
+             ('/debate', Debate)],
+    debug=True,
+    config=config)

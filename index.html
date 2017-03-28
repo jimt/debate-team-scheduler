@@ -7,11 +7,11 @@
     <h1>Debate Schedule Tool</h1>
     <form action="debate" method="post">
       {% if error %}
-      <table cellpadding="4" bgcolor="#ffcccc" border="2">
-        <tr><td>{{ error }}</td></tr>
-      </table>
+      <div class="errors">
+        {{ error|safe }}
+      </div>
       {% endif %}
-      <table cellpadding="4">
+      <table>
         <tr><td align="right">Union name:</td><td><input name="uname" type="text" size="25" value="{{ uname }}"></td></tr>
         <tr><td align="right">Tournament name:</td><td><input name="tname" type="text" size="25" value="{{ tname }}"></td></tr>
         <tr><td align="right">Number of rounds:</td><td><input name="nrounds" type="text" size="5" value="{{ nrounds }}"></td></tr>

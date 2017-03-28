@@ -5,8 +5,20 @@ body {
 	background: #fff;
 }
 
+.errors {
+    margin: 1em;
+    padding: 6px;
+	background-color: #ffcccc;
+	border: 1;
+	border-radius: 4px;
+}
+
 tr.oddrow {
 	background-color: #EEEEEE;
+}
+
+td {
+	padding: 4px;
 }
 
 @media print {
